@@ -1,0 +1,19 @@
+# Ignorowanie plików konfiguracyjnych Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ignorowanie plików dziennika i innych artefaktów
+crash.log
+terraform.tfplan
+terraform.tfplan.*
+
+# Ignorowanie plików edytora
+*.log
+*.bak
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
