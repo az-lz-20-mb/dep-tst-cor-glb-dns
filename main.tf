@@ -1,9 +1,9 @@
 terraform {
   backend "azurerm" {
-    storage_account_name = "tfstatestorage2lz20"
-    container_name       = "tfstate4"
+    resource_group_name  = "tfstate-storage3"
+    storage_account_name = "tfstatestorage3lz20"
+    container_name       = "tfstate2"
     key                  = "terraform.tfstate"
-    resource_group_name  = "tfstate-storage2"
   }
 
   required_version = "~> 1.5"
@@ -23,7 +23,7 @@ terraform {
 provider "azurerm" {
   features {
     resource_group {
-      prevent_deletion_if_contains_resources = false
+        prevent_deletion_if_contains_resources = false
     }
   }
 }
@@ -35,86 +35,40 @@ module "naming" {
   suffix = [local.environment, local.short_location, local.platform, local.type]
 }
 
-# 🔹 Grupy zasobów dla każdego regionu
-resource "azurerm_resource_group" "rg_germany" {
-  name     = "${module.naming.resource_group.name}-germany"
-  location = "germanywestcentral"
+resource "azurerm_resource_group" "rg" {
+  for_each = local.resource_groups
+
+  name     = each.value.name
+  location = each.value.location
 }
 
-resource "azurerm_resource_group" "rg_poland" {
-  name     = "${module.naming.resource_group.name}-poland"
-  location = "polandcentral"
-}
-
-resource "azurerm_resource_group" "rg_sweden" {
-  name     = "${module.naming.resource_group.name}-sweden"
-  location = "swedencentral"
-}
-
-# 🔹 Pobranie istniejących Virtual Networków i przypisanie do odpowiednich RG
-data "azurerm_virtual_network" "existing_vnet_germany" {
-  name                = "vnet-tst-shd-hub-net-01"
-  resource_group_name = "rg-tst-shd-hub-net-01"
-}
-
-data "azurerm_virtual_network" "existing_vnet_poland" {
-  name                = "vnet-tst-shd-hub-net-02"
-  resource_group_name = "rg-tst-shd-hub-net-01"
-}
 
 data "azurerm_virtual_network" "existing_vnet_sweden" {
-  name                = "vnet-tst-shd-hub-net-03"
-  resource_group_name = "rg-tst-shd-hub-net-01"
+  name                = "vnet-tst-swc-net-01"
+  resource_group_name = "rg-tst-swc-net-01"
 }
 
-# 🔹 Private DNS Zones w każdym regionie
-module "private_dns_zones_germany" {
-  source  = "git::https://github.com/az-lz-20-mb/mod-avm-res-network-privatelinkdnszone.git"
+data "azurerm_virtual_network" "existing_vnets" {
+  for_each = var.existing_vnets
 
-  location            = azurerm_resource_group.rg_germany.location
-  resource_group_name = azurerm_resource_group.rg_germany.name
-
-  resource_group_creation_enabled = false
-
-  virtual_network_resource_ids_to_link_to = {
-    "existing_vnet_germany" = {
-      vnet_resource_id = data.azurerm_virtual_network.existing_vnet_germany.id
-    }
-  }
-
-  enable_telemetry = var.enable_telemetry
+  name                = each.value.name
+  resource_group_name = each.value.resource_group
 }
 
-module "private_dns_zones_poland" {
-  source  = "git::https://github.com/az-lz-20-mb/mod-avm-res-network-privatelinkdnszone.git"
 
-  location            = azurerm_resource_group.rg_poland.location
-  resource_group_name = azurerm_resource_group.rg_poland.name
-
+module "private_dns_zones-1" {
+  source                          = "git::https://github.com/az-lz-20-mb/mod-avm-res-network-privatelinkdnszone.git"
+  for_each                        = local.resource_groups
+  location                        = each.value.location
+  resource_group_name             = each.value.name
   resource_group_creation_enabled = false
+  enable_telemetry                = var.enable_telemetry
+
 
   virtual_network_resource_ids_to_link_to = {
-    "existing_vnet_poland" = {
-      vnet_resource_id = data.azurerm_virtual_network.existing_vnet_poland.id
-    }
+  for key, vnet_data in local.vnets_with_ids : key => {
+      vnet_resource_id =  vnet_data.id
+ } if vnet_data.location == each.value.location
+ 
   }
-
-  enable_telemetry = var.enable_telemetry
-}
-
-module "private_dns_zones_sweden" {
-  source  = "git::https://github.com/az-lz-20-mb/mod-avm-res-network-privatelinkdnszone.git"
-
-  location            = azurerm_resource_group.rg_sweden.location
-  resource_group_name = azurerm_resource_group.rg_sweden.name
-
-  resource_group_creation_enabled = false
-
-  virtual_network_resource_ids_to_link_to = {
-    "existing_vnet_sweden" = {
-      vnet_resource_id = data.azurerm_virtual_network.existing_vnet_sweden.id
-    }
-  }
-
-  enable_telemetry = var.enable_telemetry
 }
