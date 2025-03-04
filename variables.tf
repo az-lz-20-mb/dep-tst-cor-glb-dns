@@ -7,17 +7,16 @@ For more information see <https://aka.ms/avm/telemetryinfo>.
 If it is set to false, then no telemetry will be collected.
 DESCRIPTION
 }
-variable "resource groups " {
-  type = map(object({
-    rg = string
-    location = string
-  }))
-}
 variable "existing_vnets" {
-  description = "Map of existing VNet; for proper functionality, the key of this map should be the location of the resource group."
+  description = "Map of existing VNets"
   type = map(object({
     name           = string
     resource_group = string
   }))
 
 }
+variable "resource_group_location" {
+  description = "Location of resource group."
+  type = string
+}
+
