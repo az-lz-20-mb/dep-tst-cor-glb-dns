@@ -1,10 +1,15 @@
 locals {
-  region            = "Germany West Central"
-  resource_group    = "rg-tst-shd-hub-net-11"
-  virtual_network   = "vnet-tst-shd-hub-net-01"
-
   short_location = "gwc"
   environment    = "tst"
   platform       = "dns"
   type           = "zone"
+
+  vnets_with_ids = {
+    for k, v in var.existing_vnets : k => {
+      id       = data.azurerm_virtual_network.existing_vnets[k].id
+      location = data.azurerm_virtual_network.existing_vnets[k].location
+    }
+  }
+
+
 }
